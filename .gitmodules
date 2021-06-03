@@ -1,0 +1,3 @@
+[submodule "Libraries/tinycc"]
+	path = Libraries/tinycc
+	url = git://repo.or.cz/tinycc.git
