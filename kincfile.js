@@ -5,7 +5,8 @@ project.cmd = true;
 project.addIncludeDir('Libraries/tinycc');
 project.addIncludeDir('Libraries/stb');
 project.addIncludeDir('Sources');
-project.addFiles('Libraries/tinycc/libtcc.c');
+project.addIncludeDir('include');
+project.addFiles('Libraries/tinycc/libtcc.c','samples/custom_layer.c');
 project.addFile('Sources/**');
 project.setDebugDir('Deployment');
 

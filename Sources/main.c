@@ -3,7 +3,6 @@
  *
  * libtcc can be useful to use tcc as a "backend" for a code generator.
  */
-#include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -11,15 +10,19 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 
+#define M9_ALLOCATOR_IMPLEMENTATION
+#include "allocator.h"
+
 #include "stb_c_lexer.h"
 
 #include "metac.h"
 #include "metac_parse.h"
 
-
+#include "custom_layer.h"
 
 int main(int argc, char **argv)
 {
+
     FILE* f = fopen("data.h", "rb");
     char* text = (char*)malloc(1 << 20);
     int len = f ? (int)fread(text, 1, 1 << 20, f) : -1;
@@ -62,6 +65,14 @@ int main(int argc, char **argv)
             
         }
     }
+    Initialize();
+    size_t length = arrlen(root.children);
+    SetData(structs, arrlen(structs));
+    for (size_t i = 0; i < length; ++i) {
+        TopLevel(root.children[i],"data.h");
+    }
 
+
+    CleanUp();
     return 0;
 }

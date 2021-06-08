@@ -1,14 +1,18 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 #include "metac_parse.h"
+
+#include "metac.h"
 
 #define STB_C_LEXER_IMPLEMENTATION
 #include "stb_c_lexer.h"
 
 #include "stb_ds.h"
+
+#include "allocator.h"
 
 #define PAREN_L 40 // (
 #define PAREN_R 41 // )
@@ -17,6 +21,7 @@
 #define SEMI_COL 59 // ;
 #define BRACKET_O 123 // {
 #define BRACKET_C 125 // }
+struct MTC_Node** structs = NULL;
 
 void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
     char* names[2];
@@ -64,16 +69,17 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                         if (i == 0) {
                             p_node = (MTC_Node*)malloc(sizeof(MTC_Node));
                             memset(p_node, 0, sizeof(MTC_Node));
-                            p_node->type_string = malloc(sizeof(char) * lex->string_len);
+                            p_node->type_string = malloc(sizeof(char) * (lex->string_len +1));
                             strcpy(p_node->type_string, lex->string);
                         }
                         else {
-                            p_node->string = malloc(sizeof(char) * lex->string_len);
+                            p_node->string = malloc(sizeof(char) * (lex->string_len +1));
                             strcpy(p_node->string, lex->string);
                         }
                         ++i;
                     }
                     arrpush(node->children, p_node);
+                    node->child_len = arrlen(node->children);
                     done = 1;
                     break;
                 }
@@ -96,13 +102,15 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                     }
                     stb_c_lexer_get_token(lex);
                     if (lex->token == CLEX_id) {
-                        node->type_string = malloc(sizeof(char) * lex->string_len);
+                        //int strlength = strlen(lex->string) + 1;
+                        node->type_string = malloc(sizeof(char) * (lex->string_len +1));
                         strcpy(node->type_string, lex->string);
                     }
                     else {
                         fprintf(stderr, "Error: Struct isn't typedef'ed and wont have a name. This will cause issues with meta generation.");
                     }
                     done = 1;
+                    arrpush(structs, node);
                     break;
                 }
                 else if (lex->token == POINTER) {
@@ -127,20 +135,25 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
             stb_c_lexer_get_token(lex);
         }
     }
+    node->tags_len = arrlen(node->tags);
+    node->child_len = arrlen(node->children);
 }
 
 void fetchTag(stb_lexer* lex, MTC_Node* node, char* tagname){
     tagname += 6;//We just keep the tag without the MetaC_
     MTC_Tag* tag = (MTC_Tag*)malloc(sizeof(MTC_Tag));
+    assert(tag != 0);
     memset(tag, 0, sizeof(MTC_Tag));
-    tag->tag = malloc(sizeof(char) * strlen(tagname));
+    size_t l = strlen(tagname) +1;
+    tag->tag = (char*)malloc(sizeof(char) * l);
+    assert(tag->tag != 0);
     strcpy(tag->tag, tagname);
     arrpush(node->tags, tag);
     char* lastPoint = lex->parse_point;
     stb_c_lexer_get_token(lex);
     if (lex->token == PAREN_L) {
         char text[128] = { 0 };
-        int len = 0;
+        size_t len = 0;
         MTC_Type type = Undefined;
         stb_c_lexer_get_token(lex);
         while (lex->token != PAREN_R) {
@@ -186,6 +199,7 @@ void fetchTag(stb_lexer* lex, MTC_Node* node, char* tagname){
             value->type_string = (char*)malloc(sizeof(char) * len);
             strcpy(value->type_string, text);
         }
+        tag->values_len = arrlen(tag->values);
     }
     else {
         lex->parse_point = lastPoint;
