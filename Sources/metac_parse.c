@@ -19,16 +19,28 @@
 #define POINTER 42
 #define COMMA 44
 #define SEMI_COL 59 // ;
+#define EQUAL 61 // =
 #define BRACKET_O 123 // {
 #define BRACKET_C 125 // }
-struct MTC_Node** structs = NULL;
+
+#define MAX_CHAR_SIZE 8192
+
+MTC_Node** structs = NULL;
+MTC_Node** enums = NULL;
+MTC_Node** vars = NULL;
+
+int isAStructKeyword(char* str) {
+    return strcmp(str,"enum") == 0 || strcmp(str, "struct") == 0 || strcmp(str, "union") == 0;
+}
 
 void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
     char* names[2];
     for (int i = 0; i < 2; ++i) {
         names[i] = malloc(sizeof(char) * 32);
+        memset(names[i], 0, sizeof(char) * 32);
     }
     int done = 0;
+    char lastType[256] = { 0 };
     while (!done) {
         for (int i = 0; i < 2; ++i) {
             int isAChar = lex->token >= 0 && lex->token < 256;
@@ -44,6 +56,7 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                         node->string = names[1];
                     }
                     done = 1;
+                    arrins(vars, 0, node);
                     break;
                 }
                 else if (lex->token == PAREN_L) {//Is a function
@@ -61,6 +74,11 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                         if (lex->token == COMMA) {
                             arrpush(node->children, p_node);
                             i = 0;
+                            p_node = NULL;
+                            continue;
+                        }
+                        else if (p_node != NULL && lex->token == POINTER) {
+                            strcat(p_node->type_string, "*");
                             continue;
                         }
                         else if (lex->token >= 0 && lex->token < 256) {
@@ -69,11 +87,12 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                         if (i == 0) {
                             p_node = (MTC_Node*)malloc(sizeof(MTC_Node));
                             memset(p_node, 0, sizeof(MTC_Node));
-                            p_node->type_string = malloc(sizeof(char) * (lex->string_len +1));
+                            p_node->type = Param;
+                            p_node->type_string = malloc(sizeof(char) * (lex->string_len +2));
                             strcpy(p_node->type_string, lex->string);
                         }
                         else {
-                            p_node->string = malloc(sizeof(char) * (lex->string_len +1));
+                            p_node->string = malloc(sizeof(char) * (lex->string_len +2));
                             strcpy(p_node->string, lex->string);
                         }
                         ++i;
@@ -83,9 +102,20 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                     done = 1;
                     break;
                 }
-                else if (lex->token == BRACKET_O && node->type == Undefined) {
-                    node->type = Struct;
-                    if (strcmp(names[i], "struct") == 0) {
+                else if (lex->token == BRACKET_O && node->type == Undefined) { // Is a Struct
+                    if (strcmp(lastType, "struct") == 0) {
+                        node->type = Struct;
+                        arrpush(structs, node);
+                    }
+                    else if (strcmp(lastType, "enum") == 0) {
+                        node->type = Enum;
+                        arrpush(enums, node);
+                    }
+                    else if (strcmp(lastType, "union") == 0) {
+                        node->type = Struct;
+                        arrpush(structs, node);
+                    }
+                    if (node->string == NULL && (strcmp(names[i], "struct") == 0 || strcmp(names[i], "enum") == 0 || strcmp(names[i], "union") == 0)) {
                         char* str = i == 1 ? names[0] : names[1];
                         node->string = str;
                     }
@@ -93,40 +123,84 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                     while (lex->token != BRACKET_C) {
                         MTC_Node n = { 0 };
                         parseAndAddNode(lex, &n);
-                        if (n.type == Var) {
+                        if (n.type == Var || n.type == EnumField) {
                             MTC_Node* v_node = (MTC_Node*)malloc(sizeof(MTC_Node));
                             memcpy(v_node, &n, sizeof(MTC_Node));
                             arrpush(node->children, v_node);
+                            vars[0] = NULL;
                         }
                         stb_c_lexer_get_token(lex);
                     }
+
                     stb_c_lexer_get_token(lex);
                     if (lex->token == CLEX_id) {
-                        //int strlength = strlen(lex->string) + 1;
+
                         node->type_string = malloc(sizeof(char) * (lex->string_len +1));
                         strcpy(node->type_string, lex->string);
                     }
-                    else {
-                        fprintf(stderr, "Error: Struct isn't typedef'ed and wont have a name. This will cause issues with meta generation.");
+                    else if (node->type_string != NULL) {
+                        char* temporary = node->string;
+                        node->string = node->type_string;
+                        node->type_string = temporary;
+                    }
+                    else if(node->type_string == NULL){
+                        fprintf(stderr, "Error: Struct or enum isn't typedef'ed and wont have a name. This will cause issues with meta generation.");
                     }
                     done = 1;
-                    arrpush(structs, node);
+                    break;
+                }
+                else if(lex->token == COMMA || lex->token == BRACKET_C)
+                {
+                    node->type = EnumField;
+                    int num_tags = arrlen(node->tags);
+                    if (num_tags > 0 && num_tags % 2 > 0) {
+                        if (names[1][0] != 0) {
+                            node->string = names[1];
+                        }
+                        if (names[0][0] != 0) {
+                            node->type_string = names[0];
+                        }
+                    }
+                    else {
+                        if (names[0][0] != 0) {
+                            node->string = names[0];
+                        }
+                        if (names[1][0] != 0) {
+                            node->type_string = names[1];
+                        }
+                    }
+                    done = 1;
+                    if (lex->token == BRACKET_C)
+                        lex->parse_point--;
                     break;
                 }
                 else if (lex->token == POINTER) {
-                    if (i == 1) {
-                        strcat(names[0], "*");
+                    while (lex->token == POINTER) {
+                        if (i == 1) {
+                            strcat(names[0], "*");
+                        }
+                        else {
+                            strcat(names[1], "*");
+                        }
+                        stb_c_lexer_get_token(lex);
                     }
-                    else {
-                        strcat(names[1], "*");
-                    }
-                    i = 0;
+                    i = !i;
+                    continue;
+                }
+                else if (lex->token == EQUAL) {
+                    i = 1;
                 }
             }
+            else if (lex->token == CLEX_intlit) {//Mostly for enum constant values
+                snprintf(names[i],32, "%i", lex->int_number);
+            }           
             else {
                 char* tag = strstr(lex->string, "MetaC_");
                 if (tag == NULL) {
                     strcpy(names[i], lex->string);
+                    if (isAStructKeyword(lex->string)) {
+                        strcpy(lastType, lex->string);
+                    }
                 }
                 else {
                     fetchTag(lex, node, tag);
@@ -152,7 +226,7 @@ void fetchTag(stb_lexer* lex, MTC_Node* node, char* tagname){
     char* lastPoint = lex->parse_point;
     stb_c_lexer_get_token(lex);
     if (lex->token == PAREN_L) {
-        char text[128] = { 0 };
+        char text[MAX_CHAR_SIZE] = { 0 };
         size_t len = 0;
         MTC_Type type = Undefined;
         stb_c_lexer_get_token(lex);
@@ -161,7 +235,7 @@ void fetchTag(stb_lexer* lex, MTC_Node* node, char* tagname){
                 MTC_Value* value = (MTC_Value*)malloc(sizeof(MTC_Value));
                 arrpush(tag->values, value);
                 value->type = type;
-                value->type_string = (char*)malloc(sizeof(char) * len);
+                value->type_string = (char*)malloc(sizeof(char) * len + 1);
                 strcpy(value->type_string, text);
                 memset(text, 0, len);
                 type = Undefined;
@@ -187,6 +261,7 @@ void fetchTag(stb_lexer* lex, MTC_Node* node, char* tagname){
                     }
                     strcpy(text, lex->string);
                     len = lex->string_len;
+                    assert(len < MAX_CHAR_SIZE);
                 }
             }
             stb_c_lexer_get_token(lex);
@@ -196,7 +271,7 @@ void fetchTag(stb_lexer* lex, MTC_Node* node, char* tagname){
             MTC_Value* value = (MTC_Value*)malloc(sizeof(MTC_Value));
             arrpush(tag->values, value);
             value->type = type;
-            value->type_string = (char*)malloc(sizeof(char) * len);
+            value->type_string = (char*)malloc(sizeof(char) * len + 1);
             strcpy(value->type_string, text);
         }
         tag->values_len = arrlen(tag->values);

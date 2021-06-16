@@ -3,6 +3,7 @@
 #define MetaC_UI
 
 #define MetaC_Printable
+#define MetaC_PrintList(...)
 #define KINC_FUNC
 #define MetaC_Range(...)
 

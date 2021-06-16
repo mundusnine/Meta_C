@@ -1,7 +1,14 @@
+const path = require('path');
 let project = new Project('metac');
 
 project.kore = false;
 project.cmd = true;
+project.cmdArgs = [
+    '-cust',
+    path.resolve(process.cwd(),'samples/data.h'),
+    path.resolve(process.cwd(),'include/metac.h'),
+    path.resolve(process.cwd(),'include/custom_layer.h')
+];
 project.addIncludeDir('Libraries/tinycc');
 project.addIncludeDir('Libraries/stb');
 project.addIncludeDir('Sources');

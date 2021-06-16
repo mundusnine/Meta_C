@@ -15,64 +15,116 @@
 
 #include "stb_c_lexer.h"
 
+#define METAC_IMPLEMENTATION
 #include "metac.h"
 #include "metac_parse.h"
 
 #include "custom_layer.h"
 
+#define MAX_FILES 2048 // If you exceed this amount you probably work for a FAANG corp ? If so Give me the monies and I will make it bigger. 
+
+static int GetVarWithType(char* str) {
+    for (int i = 0; i < arrlen(vars); ++i) {
+        if (vars[i] != NULL && strcmp(vars[i]->type_string, str) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
 int main(int argc, char **argv)
 {
-
-    FILE* f = fopen("data.h", "rb");
-    char* text = (char*)malloc(1 << 20);
-    int len = f ? (int)fread(text, 1, 1 << 20, f) : -1;
-    stb_lexer lex;
-    if (len < 0) {
-        fprintf(stderr, "Error opening file\n");
-        free(text);
-        if(f != 0)
-            fclose(f);
-        return 1;
-    }
-    fclose(f);
-    MTC_Node root = { NULL };
-    MTC_Tag tag = { "Root",NULL};
-    arrpush(root.tags,&tag);
-    MTC_Node* node = NULL;
-    arrsetcap(root.children, 1024);
-    stb_c_lexer_init(&lex, text, text + len, (char*)malloc(0x10000), 0x10000);
-    while (stb_c_lexer_get_token(&lex)) {
-        int isAChar = lex.token >= 0 && lex.token < 256;
-        if (lex.token == PARSE_ERROR) {
-            printf("\n<<<PARSE ERROR>>>\n");
-            break;
+    MTC_Node roots = {NULL};
+    int root_amounts[MAX_FILES] = { 0 };
+    char* fileNames[MAX_FILES] = {0};
+    int8_t start = 0;
+    int file_amount = 0;
+    for (int i = 1; i < argc; ++i) {
+        char* arg = argv[i];
+        if (strcmp(argv[i], "--custom") == 0 || strcmp(argv[i], "-cust") == 0) {
+            start = 1;
         }
-        if (lex.token == IDENTIFIER) {
-            char* tag = strstr(lex.string, "MetaC_");
-            if (tag != NULL) {
-                if (node == NULL) {
-                    node = (MTC_Node*)malloc(sizeof(MTC_Node));
-                    memset(node, 0, sizeof(MTC_Node));
-                    arrpush(root.children, node);
+        else if (argv[i][0] == '-') {
+            start = 0;
+        }
+        else if (start) {
+            fileNames[file_amount] = argv[i];
+            file_amount++;
+        }
+    }
+    for (int i = 0; i < file_amount; ++i) {
+        FILE* f = fopen(fileNames[i], "rb");
+        char* text = (char*)malloc(1 << 20);
+        int len = f ? (int)fread(text, 1, 1 << 20, f) : -1;
+        stb_lexer lex;
+        if (len < 0) {
+            fprintf(stderr, "Error opening file\n");
+            free(text);
+            if (f != 0)
+                fclose(f);
+            return 1;
+        }
+        fclose(f);
+        MTC_Node* node = NULL;
+        //arrsetcap(root->children, 1024);
+        stb_c_lexer_init(&lex, text, text + len, (char*)malloc(0x10000), 0x10000);
+        char* lastPoint = lex.parse_point;
+        while (stb_c_lexer_get_token(&lex)) {
+            int isAChar = lex.token >= 0 && lex.token < 256;
+            if (lex.token == PARSE_ERROR) {
+                printf("\n<<<PARSE ERROR>>>\n");
+                break;
+            }
+            if (lex.token == IDENTIFIER) {
+                char* tag = strstr(lex.string, "MetaC_");
+                if (tag != NULL) {
+                    if (node == NULL) {
+                        node = (MTC_Node*)malloc(sizeof(MTC_Node));
+                        memset(node, 0, sizeof(MTC_Node));
+                        arrpush(roots.children, node);
+                        root_amounts[i]++;
+                    }
+                    fetchTag(&lex, node, tag);
+                    continue;
                 }
-                fetchTag(&lex, node,tag);
-                continue;
+                else {
+                    int exists = GetVarWithType(lex.string);
+                    if (exists > -1) {
+                        node = vars[exists];
+                        vars[exists] = NULL;
+                        lex.parse_point = lastPoint;
+                        node->type = Undefined;
+                        continue;
+                    }
+                }
+
+            }
+            if (node != NULL) {
+                parseAndAddNode(&lex, node);
+                node = NULL;
+
+            }
+            if (strcmp(lex.string, "struct") != 0) {
+                lastPoint = lex.parse_point;
             }
         }
-        if (node != NULL) {
-            parseAndAddNode(&lex, node);
-            node = NULL;
-            
+        while(0 < arrlen(vars))//We only keep vars from the same file. This will resolve collisions and anyways the struct and it's typedef should be in the same file. 
+        {
+            arrpop(vars);
         }
     }
-    Initialize();
-    size_t length = arrlen(root.children);
-    SetData(structs, arrlen(structs));
-    for (size_t i = 0; i < length; ++i) {
-        TopLevel(root.children[i],"data.h");
+
+    if (file_amount > 0) {
+        SetData(structs, arrlen(structs), enums, arrlen(enums));
+        Initialize();
+        int counter = 0;
+        for (int y = 0; y < file_amount; ++y) {
+            char* filepath = fileNames[y];
+            for (size_t i = 0; i < root_amounts[y]; ++i) {
+                TopLevel(roots.children[counter+i], filepath);
+            }
+            counter += root_amounts[y];
+        }
+        CleanUp();
     }
-
-
-    CleanUp();
     return 0;
 }
