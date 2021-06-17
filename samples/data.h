@@ -2,6 +2,8 @@
 
 #include "metacdefs.h"
 
+#define MetaC_V1 //We enable custom defines in the format `MetaC_YOURNAME` you just determine on your side in the custom layer what you do with them :)
+
 MetaC_Doc("")
 typedef struct list {
     void* data;
@@ -11,7 +13,6 @@ typedef struct list {
 
 MetaC_Doc("Hey ho this is coolyio")
 typedef struct Node_t Node_t;
-
 struct Node_t {
     MetaC_PrintList("@this->len","@this->data")
     List* array;

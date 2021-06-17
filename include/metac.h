@@ -4,13 +4,13 @@
 
 #include "metacdefs.h"
 
-MetaC_Doc("Used to identify which kind of grammatical object a node represents, stored in the MetaC_Member(MTC_Node, type) member of the MTC_Node structure. Check this member against this enum before assuming that a node is a particular language construct.")
+MetaC_Doc("Used to identify which kind of grammatical object a node represents, stored in the type member of the MetaC_Link(MTC_Node) structure. Check this member against this enum before assuming that a node is a particular language construct.")
 typedef enum {
     MetaC_Doc("Undefined node type, produced by either invalid code, a bug in the parser or when no type was needed(Default type on nodes).")
     Undefined,
-    MetaC_Doc("A node that represents a product-type that includes a set of declarations. The list of declarations is pointed at by the MetaC_Member(MTC_Node,children) member.")
+    MetaC_Doc("A node that represents a product-type that includes a set of declarations. The list of declarations is pointed at by the MetaC_Link(MTC_Node) children member.")
     Struct,
-    MetaC_Doc("A node that represents a function. The return type can be accessed through the MetaC_Member(MTC_Node,type_string) member. The list of parameters can be accessed through the MetaC_Member(MTC_Node,children) member.")
+    MetaC_Doc("A node that represents a function. The return type can be accessed through the MetaC_Link(MTC_Node) type_string member. The list of parameters can be accessed through the MetaC_Link(MTC_Node) children member.")
     Func,
     MetaC_Doc("A node that represents a parameter with it's name and type.")
     Param,
@@ -18,27 +18,27 @@ typedef enum {
     Const,
     MetaC_Doc("A node that represents a variable with it's name and type.")
     Var,
-    MetaC_Doc("A node that represents an enum that includes a set of declarations.The list of declarations is pointed at by the MetaC_Member(MTC_Node,children) member.")
+    MetaC_Doc("A node that represents an enum that includes a set of declarations.The list of declarations is pointed at by the MetaC_Link(MTC_Node) children member.")
     Enum,
     EnumField,
-    MetaC_Doc("An identifier node that represents a string constant in the code. The textual contents representing the intended string value are stored in the node's MetaC_Member(MTC_Value,type_string) member.")
+    MetaC_Doc("An identifier node that represents a string constant in the code. The textual contents representing the intended string value are stored in the node's MetaC_Link(MTC_Value) type_string member.")
     ConstStr,
-    MetaC_Doc("An identifier node that represents a number constant in the code. The textual contents representing the intended number value are stored in the node's MetaC_Member(MTC_Value,type_string) member.")
+    MetaC_Doc("An identifier node that represents a number constant in the code. The textual contents representing the intended number value are stored in the node's MetaC_Link(MTC_Value) type_string member.")
     Number,
-    MetaC_Doc("An identifier node that represents a real number constant in the code. The textual contents representing the intended real number value are stored in the node's MetaC_Member(MTC_Value,type_string) member.")
+    MetaC_Doc("An identifier node that represents a real number constant in the code. The textual contents representing the intended real number value are stored in the node's MetaC_Link(MTC_Value) type_string member.")
     Real,
-    MetaC_Doc("An identifier node that represents a boolean constant in the code. The textual contents representing the intended boolean value are stored in the node's MetaC_Member(MTC_Value,type_string) member.")
+    MetaC_Doc("An identifier node that represents a boolean constant in the code. The textual contents representing the intended boolean value are stored in the node's MetaC_Link(MTC_Value) type_string member.")
     Boolean
 } MTC_Type;
 
-MetaC_Doc("")
+MetaC_Doc("An object containing the type info for a specific value i.e. 100, true, etc. The tyep_string member holds the absolute value in string format")
 typedef struct Value MTC_Value;
 struct Value {
     MTC_Type type;
     char* type_string;
 };
 
-MetaC_Doc("")
+MetaC_Doc("A object representing the assosiated tag present in the code. To access the absolute values passed to the tag, use the values member of the struct.")
 typedef struct Tag MTC_Tag;
 struct Tag {
     char* tag;
@@ -47,7 +47,7 @@ struct Tag {
     size_t values_len;
 };
 
-MetaC_Doc("An")
+MetaC_Doc("A node containing all the information relative to a specific section of code.To get the type of the code section use the type member and compare it to MetaC_Link(MTC_Type). To get the Metac_Link(MTC_Tag)s present on the section of code use the tags member. If ever the the language construct has subattributes they will be available in the children member.")
 typedef struct Node MTC_Node;
 struct Node {
     MetaC_PrintList("@Member:tags_len")
@@ -61,12 +61,41 @@ struct Node {
     size_t child_len;
 };
 
+MetaC_Doc("Check if a node has a specific tag",
+"@param n: The node to check on",
+"@param str: A string representing the tag without the MetaC_ prefix",
+"@return: 0 or 1")
 int MTC_NodeHasTag(MTC_Node* n, char* str);
+
+MetaC_Doc("Check if a node is of a specific C type",
+"@param n: The node to check on",
+"@param str: A string representing the type i.e. double, int, MTC_Type, etc.",
+"@return: 0 or 1")
 int MTC_MatchType(MTC_Node* n, char* str);
+
+MetaC_Doc("Fetch a Struct node based on the associated type string. Will only fetch the struct if it was tagged as we don't parse none tagged code.",
+"@param str: A string representing the name of the Struct type i.e. MyCustomStruct_t.",
+"@return: A MetaC_Link(MTC_Node*) or NULL")
 MTC_Node* MTC_GetStructNode(char* str);
+
+MetaC_Doc("Fetch a Enum node based on the associated type string. Will only fetch the struct if it was tagged as we don't parse none tagged code.",
+"@param str: A string representing the name of the Enum type i.e. MyEnumIsCool.",
+"@return: A MetaC_Link(MTC_Node*) or NULL")
 MTC_Node* MTC_GetEnumNode(char* str);
+MetaC_Doc("Get the string for accessing the field or Var",
+"@param node: The node of the field or var that we want the access string of.",
+"@return: -> or .")
 char* MTC_GetAccessStringForVar(MTC_Node* node);
+
+MetaC_Doc("A general implementation of PrintCode generation. i.e. generates code to easily the fields of a struct or the value of an enum type.",
+"@param file: A C File handle",
+"@param root: The root node we wan't to generate print code for.",
+"@param access_string: The way to access the fields on the C struct.")
 void GeneratePrintCode(FILE* file, MTC_Node* root, char* access_string);
+
+MetaC_Doc("A general implementation of markdown Docs generation.",
+"@param file: A C File handle",
+"@param root: The root node we wan't to generate docs for.")
 void GenerateDocsMD(FILE* file, MTC_Node* root);
 
 //#define METAC_IMPLEMENTATION
@@ -84,7 +113,6 @@ static void SetData(MTC_Node** p_structs, size_t structs_amount, MTC_Node** p_en
     num_structs = structs_amount;
     enums = p_enums;
     num_enums = enums_amount;
-
 }
 
 int MTC_NodeHasTag(MTC_Node* n,char* str) {
@@ -182,16 +210,6 @@ void GeneratePrintCode(FILE* file, MTC_Node* root, char* access_string)
                 {
                     fprintf(file, "printf(\"%s : %%p\", %s%s);\n", node->string, access_string, node->string);
                 }
-
-                //// NOTE(jsn): Recursively descending for inline struct definition.
-                //else if (node->declaration.type->type == DataDeskNodeType_StructDeclaration)
-                //{
-                //    char next_access_string[128] = { 0 };
-                //    snprintf(next_access_string, sizeof(next_access_string), "%s%s%s", access_string, node->string,
-                //        DataDeskGetAccessStringForDeclaration(node));
-                //    GeneratePrintCode(file, node->declaration.type->children_list_head,
-                //        next_access_string);
-                //}
                 else
                 {
                     // NOTE(jsn): Recursively descending for other type definition that we know about.
@@ -292,10 +310,10 @@ static void linkifyType(char* type_string,char* out) {
                 temp[i] = '-';
             }
         }
-        snprintf(out, 256, "type: [%s](#%s)",type_string, temp);
+        snprintf(out, 256, "[%s](#%s)",type_string, temp);
     }
     else {
-        snprintf(out, 256, "type: `%s`",type_string);
+        snprintf(out, 256, "`%s`",type_string);
     }
 }
 static char* GetParamString(MTC_Tag* t,char* p_name) {
@@ -328,7 +346,38 @@ static char* GetMemberString(MTC_Tag* t, char* p_name) {
     }
     return NULL;
 }
-
+static int linkifyString(char* str,char* out) {
+    char* temp = strstr(str, "MetaC_Link(");
+    if (temp != NULL) {
+        memcpy(out, str, temp - str);
+        char* lastTemp = NULL;
+        while (temp != NULL) {
+            int i = 0;
+            temp += strlen("MetaC_Link(");
+            char type[256] = { 0 };
+            char type2[256] = { 0 };
+            while (temp[i] != ')') {
+                type[strlen(type)] = temp[i];
+                ++i;
+            }
+            linkifyType(type, type2);
+            strcat(out, type2);
+            lastTemp = temp + i + 1;
+            temp = strstr(temp, "MetaC_Link(");
+            if (temp == NULL) {
+                strncat(out, lastTemp, strlen(lastTemp));
+            }
+            else {
+                strncat(out, lastTemp, temp - lastTemp);
+            }
+        }
+        return 1;
+    }
+    else {
+        strcpy(out, str);
+    }
+    return 0;
+}
 void GenerateDocsMD(FILE* file, MTC_Node* root) {
     MTC_Tag* t;
     switch (root->type) {
@@ -339,23 +388,23 @@ void GenerateDocsMD(FILE* file, MTC_Node* root) {
             fprintf(file, "#### Params:\n");
             for (int i = 0; i < root->child_len; ++i) {
                 MTC_Node* n = root->children[i];
-                char* str = GetParamString(t,n->string);
+                char* str = n->string != NULL ? GetParamString(t, n->string): NULL;
                 if (str != NULL) {
                     char type[256] = {0};
                     linkifyType(n->type_string, type);
-                    fprintf(file, "* name: `%s` %s \n\t>\n\t>  Description:\n\t>\n\t>  %s\n",n->string,type,str);
+                    fprintf(file, "* name: `%s` type: %s \n\t>\n\t>  Description:\n\t>\n\t>  %s\n",n->string,type,str);
                 }
                 else {
                     char type[256] = { 0 };
                     linkifyType(n->type_string, type);
-                    fprintf(file, "* name: `%s` %s \n", n->string, type);
+                    fprintf(file, "* name: `%s` type: %s \n", n->string, type);
                 }
             }
             char* rtrn = GetParamString(t,"@return");
             if (rtrn != NULL) {
                 char type[256] = { 0 };
                 linkifyType(root->type_string, type);
-                fprintf(file, "#### Return Value:\n* %s\n\t>\n\t>  Description:\n\t>\n\t>  %s\n", type,rtrn);
+                fprintf(file, "#### Return Value:\n* type: %s\n\t>\n\t>  Description:\n\t>\n\t>  %s\n", type,rtrn);
             }
             break;
         case Struct:
@@ -367,9 +416,12 @@ void GenerateDocsMD(FILE* file, MTC_Node* root) {
                 MTC_Node* n = root->children[i];
                 char* str = GetMemberString(t, n->string);
                 if (str != NULL) {
+                    assert(strlen(str) < 1024);
+                    char nstr[1024] = { 0 };
                     char type[256] = { 0 };
+                    linkifyString(str, nstr);
                     linkifyType(n->type_string, type);
-                    fprintf(file, "* name: `%s` %s \n\t>\n\t>  Description:\n\t>\n\t>  %s\n", n->string, type, str);
+                    fprintf(file, "* name: `%s` type: %s \n\t>\n\t>  Description:\n\t>\n\t>  %s\n", n->string, type, nstr);
                 }
                 else {
                     char type[256] = { 0 };
@@ -392,7 +444,10 @@ void GenerateDocsMD(FILE* file, MTC_Node* root) {
         case Enum:
             fprintf(file, "### %s\n", root->type_string);
             t = MTC_GetTagNode(root, "Doc");
-            fprintf(file, "Description:\n>\n>  %s \n", t->values[0]->type_string);
+            assert(strlen(t->values[0]->type_string) < 1024);
+            char nstr[1024] = { 0 };
+            linkifyString(t->values[0]->type_string, nstr);
+            fprintf(file, "Description:\n>\n>  %s \n", nstr);
             fprintf(file, "#### Named Values:\n");
             for (int i = 0; i < root->child_len; ++i) {
                 MTC_Node* n = root->children[i];
@@ -400,10 +455,14 @@ void GenerateDocsMD(FILE* file, MTC_Node* root) {
                 if (n->type_string != NULL) {
                     snprintf(type, 256, "Value: %s", n->type_string);
                 }
-                fprintf(file, "* name: `%s` %s \n", n->string, type);
+                fprintf(file, "* name: `%s` type: %s \n", n->string, type);
                 MTC_Tag* tag = MTC_GetTagNode(n, "Doc");
                 if (tag != NULL && tag->values_len > 0) {
-                    fprintf(file, "\t>\n\t>  Description:\n\t>\n\t>  %s\n", tag->values[0]->type_string);
+                    assert(strlen(tag->values[0]->type_string) < 1024);
+                    char nstr[1024] = { 0 };
+                    char type[256] = { 0 };
+                    linkifyString(tag->values[0]->type_string, nstr);
+                    fprintf(file, "\t>\n\t>  Description:\n\t>\n\t>  %s\n", nstr);
                 }
             }
         default:

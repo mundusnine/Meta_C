@@ -10,7 +10,9 @@ static FILE* global_markdown_file = 0;
 void Initialize(void)
 {
     global_header_file = fopen("generated_print.h", "wb");
+	fprintf(global_header_file, "#pragma once\n\n");
     global_implementation_file = fopen("generated_print.c", "wb");
+	fprintf(global_implementation_file, "#include \"generated_print.h\"\n\n");
 	global_markdown_file = fopen("docs.md","wb");
 }
 
