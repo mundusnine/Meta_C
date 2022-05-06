@@ -1,15 +1,3 @@
-[submodule "Libraries/tinycc"]
-	path = Libraries/tinycc
-	url = git://repo.or.cz/tinycc.git
-[submodule "Tools/kincmake"]
-	path = Tools/kincmake
-	url = https://github.com/Kode/kincmake.git
-[submodule "Tools/nodejs_bin"]
-	path = Tools/nodejs_bin
-	url = https://github.com/Kode/nodejs_bin.git
 [submodule "Tools/kraffiti_bin"]
 	path = Tools/kraffiti_bin
-	url = https://github.com/Kode/kraffiti_bin.git
-[submodule "kraffiti"]
-	path = Tools/kraffiti
 	url = https://github.com/Kode/kraffiti_bin.git
