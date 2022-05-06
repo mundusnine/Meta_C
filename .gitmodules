@@ -1,3 +1,12 @@
 [submodule "Tools/kraffiti_bin"]
 	path = Tools/kraffiti_bin
 	url = https://github.com/Kode/kraffiti_bin.git
+[submodule "Tools/windows_x64"]
+	path = Tools/windows_x64
+	url = https://github.com/Kode/KincTools_windows_x64.git
+[submodule "Tools/linux_x64"]
+	path = Tools/linux_x64
+	url = https://github.com/Kode/KincTools_linux_x64.git
+[submodule "Tools/freebsd_x64"]
+	path = Tools/freebsd_x64
+	url = https://github.com/Kode/KincTools_freebsd_x64.git
