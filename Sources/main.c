@@ -1,8 +1,3 @@
-/*
- * Simple Test program for libtcc
- *
- * libtcc can be useful to use tcc as a "backend" for a code generator.
- */
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -21,6 +16,15 @@
 
 #include "custom_layer.h"
 
+#if defined(KINC_DYNAMIC)
+#define EXPORT_FUNC __declspec(dllimport)
+#elif defined(KINC_DYNAMIC_COMPILE)
+#define EXPORT_FUNC __declspec(dllexport)
+#else
+#define EXPORT_FUNC
+#endif
+
+
 #define MAX_FILES 2048 // If you exceed this amount you probably work for a FAANG corp ? If so Give me the monies and I will make it bigger. 
 
 static int GetVarWithType(char* str) {
@@ -31,28 +35,12 @@ static int GetVarWithType(char* str) {
     }
     return -1;
 }
-int main(int argc, char **argv)
-{
+EXPORT_FUNC int metac_run(char** file_names,int file_amount){
     MTC_Node roots = {NULL};
     int root_amounts[MAX_FILES] = { 0 };
-    char* fileNames[MAX_FILES] = {0};
-    int8_t start = 0;
-    int file_amount = 0;
-    for (int i = 1; i < argc; ++i) {
-        char* arg = argv[i];
-        if (strcmp(argv[i], "--custom") == 0 || strcmp(argv[i], "-cust") == 0) {
-            start = 1;
-        }
-        else if (argv[i][0] == '-') {
-            start = 0;
-        }
-        else if (start) {
-            fileNames[file_amount] = argv[i];
-            file_amount++;
-        }
-    }
+
     for (int i = 0; i < file_amount; ++i) {
-        FILE* f = fopen(fileNames[i], "rb");
+        FILE* f = fopen(file_names[i], "rb");
         char* text = (char*)malloc(1 << 20);
         int len = f ? (int)fread(text, 1, 1 << 20, f) : -1;
         stb_lexer lex;
@@ -61,7 +49,7 @@ int main(int argc, char **argv)
             free(text);
             if (f != 0)
                 fclose(f);
-            return 1;
+            return 0;
         }
         fclose(f);
         MTC_Node* node = NULL;
@@ -118,13 +106,38 @@ int main(int argc, char **argv)
         Initialize();
         int counter = 0;
         for (int y = 0; y < file_amount; ++y) {
-            char* filepath = fileNames[y];
+            char* filepath = file_names[y];
             for (size_t i = 0; i < root_amounts[y]; ++i) {
                 TopLevel(roots.children[counter+i], filepath);
             }
             counter += root_amounts[y];
         }
         CleanUp();
+    }
+    return 1;
+}
+
+int main(int argc, char **argv)
+{
+    char* fileNames[MAX_FILES] = {0};
+    int8_t start = 0;
+    int file_amount = 0;
+    for (int i = 1; i < argc; ++i) {
+        char* arg = argv[i];
+        if (strcmp(argv[i], "--custom") == 0 || strcmp(argv[i], "-cust") == 0) {
+            start = 1;
+        }
+        else if (argv[i][0] == '-') {
+            start = 0;
+        }
+        else if (start) {
+            fileNames[file_amount] = argv[i];
+            file_amount++;
+        }
+    }
+    int success = metac_run(fileNames,file_amount);
+    if(!success){
+        fprintf(stderr,"Failed to generate on some files...\n");
     }
     return 0;
 }
