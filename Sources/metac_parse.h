@@ -6,7 +6,7 @@
 #define IDENTIFIER 260
 
 void fetchTag(struct stb_lexer* lex, MTC_Node* node, char* tagname);
-void parseAndAddNode(struct stb_lexer* lex, MTC_Node* node);
+void parseAndAddNode(struct stb_lexer* lex, MTC_Node* node, char** filters, int num_filters);
 extern MTC_Node** structs;
 extern MTC_Node** enums;
 extern MTC_Node** vars;

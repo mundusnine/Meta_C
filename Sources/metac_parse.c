@@ -11,7 +11,7 @@
 #include "stb_c_lexer.h"
 
 #include "stb_ds.h"
-
+#undef malloc
 #include "allocator.h"
 
 #define PAREN_L 40 // (
@@ -33,7 +33,7 @@ int isAStructKeyword(char* str) {
     return strcmp(str,"enum") == 0 || strcmp(str, "struct") == 0 || strcmp(str, "union") == 0;
 }
 
-void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
+void parseAndAddNode(stb_lexer* lex, MTC_Node* node,char** filters, int num_filters) {
     char* names[2];
     for (int i = 0; i < 2; ++i) {
         names[i] = malloc(sizeof(char) * 32);
@@ -88,7 +88,7 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                             p_node = (MTC_Node*)malloc(sizeof(MTC_Node));
                             memset(p_node, 0, sizeof(MTC_Node));
                             p_node->type = Param;
-                            p_node->type_string = malloc(sizeof(char) * (lex->string_len +2));
+                            p_node->type_string = malloc(sizeof(char) * (lex->string_len + 4));
                             strcpy(p_node->type_string, lex->string);
                         }
                         else {
@@ -122,7 +122,7 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                     stb_c_lexer_get_token(lex);
                     while (lex->token != BRACKET_C) {
                         MTC_Node n = { 0 };
-                        parseAndAddNode(lex, &n);
+                        parseAndAddNode(lex, &n,filters,num_filters);
                         if (n.type == Var || n.type == EnumField) {
                             MTC_Node* v_node = (MTC_Node*)malloc(sizeof(MTC_Node));
                             memcpy(v_node, &n, sizeof(MTC_Node));
@@ -195,7 +195,12 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
                 snprintf(names[i],32, "%i", lex->int_number);
             }           
             else {
-                char* tag = strstr(lex->string, "MetaC_");
+                char* tag = NULL;
+                for (int i = 0; i < num_filters; ++i) {
+                    tag = strstr(lex->string, filters[i]);
+                    if (tag != NULL)
+                        break;
+                }
                 if (tag == NULL) {
                     strcpy(names[i], lex->string);
                     if (isAStructKeyword(lex->string)) {
@@ -213,8 +218,19 @@ void parseAndAddNode(stb_lexer* lex, MTC_Node* node) {
     node->child_len = arrlen(node->children);
 }
 
+static int find_first(char* text, char c) {
+    size_t len = strlen(text);
+    int i = 0;
+    while (text[i] != 0) {
+        if (text[i] == c) {
+            break;
+        }
+        ++i;
+    }
+    return i != len ? i+1 : 0;
+}
 void fetchTag(stb_lexer* lex, MTC_Node* node, char* tagname){
-    tagname += 6;//We just keep the tag without the MetaC_
+    tagname += find_first(tagname,'_');//We just keep the tag without the YourTag_
     MTC_Tag* tag = (MTC_Tag*)malloc(sizeof(MTC_Tag));
     assert(tag != 0);
     memset(tag, 0, sizeof(MTC_Tag));

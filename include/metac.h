@@ -31,7 +31,7 @@ typedef enum {
     Boolean
 } MTC_Type;
 
-MetaC_Doc("An object containing the type info for a specific value i.e. 100, true, etc. The tyep_string member holds the absolute value in string format")
+MetaC_Doc("An object containing the type info for a specific value i.e. 100, true, etc. The type_string member holds the absolute value in string format")
 typedef struct Value MTC_Value;
 struct Value {
     MTC_Type type;
@@ -309,6 +309,11 @@ static void linkifyType(char* type_string,char* out) {
             if (temp[i] == ' ') {
                 temp[i] = '-';
             }
+        }
+        int len = strlen(temp);
+        while (temp[len - 1] == '*') {
+            temp[len - 1] = '\0';
+            len--;
         }
         snprintf(out, 256, "[%s](#%s)",type_string, temp);
     }

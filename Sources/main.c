@@ -35,7 +35,7 @@ static int GetVarWithType(char* str) {
     }
     return -1;
 }
-EXPORT_FUNC int metac_run(char** file_names,int file_amount){
+EXPORT_FUNC int metac_run(char** file_names,int file_amount,char** filters,int num_filters){
     MTC_Node roots = {NULL};
     int root_amounts[MAX_FILES] = { 0 };
 
@@ -63,7 +63,12 @@ EXPORT_FUNC int metac_run(char** file_names,int file_amount){
                 break;
             }
             if (lex.token == IDENTIFIER) {
-                char* tag = strstr(lex.string, "MetaC_");
+                char* tag = NULL;
+                for (int i = 0; i < num_filters; ++i) {
+                    tag = strstr(lex.string, filters[i]);
+                    if (tag != NULL)
+                        break;
+                }
                 if (tag != NULL) {
                     if (node == NULL) {
                         node = (MTC_Node*)malloc(sizeof(MTC_Node));
@@ -87,7 +92,7 @@ EXPORT_FUNC int metac_run(char** file_names,int file_amount){
 
             }
             if (node != NULL) {
-                parseAndAddNode(&lex, node);
+                parseAndAddNode(&lex, node,filters,num_filters);
                 node = NULL;
 
             }
@@ -135,7 +140,9 @@ int main(int argc, char **argv)
             file_amount++;
         }
     }
-    int success = metac_run(fileNames,file_amount);
+    #define NUM_FILTERS 1
+    char* filters[NUM_FILTERS] = { "MetaC_" };
+    int success = metac_run(fileNames, file_amount, filters, NUM_FILTERS);
     if(!success){
         fprintf(stderr,"Failed to generate on some files...\n");
     }

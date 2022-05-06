@@ -2,18 +2,11 @@
 
 #ifdef M9_ALLOCATOR_IMPLEMENTATION
 
-// if we've already included m9_allocator before, undefine the macros
-#ifdef malloc
-#undef malloc
-#undef free
-#undef realloc
-#endif
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
 
-#define LIST_SIZE 4096 * 4096
+#define LIST_SIZE 4096 * 4096 * 4
 
 typedef struct free_info {
     void* freed;
@@ -38,9 +31,6 @@ void* m9_malloc(size_t size,const char *file, int line) {
    void* ptr = &heap[old_top];
    return ptr;
 }
-
-#define malloc(sz,file,line)    m9_malloc(sz, file, line)
-#define realloc(p,sz,file,line) m9_realloc(p,sz, file,line)
 
 #define STB_LEAKCHECK_IMPLEMENTATION
 #include "stb_leakcheck.h"
@@ -78,10 +68,15 @@ void   m9_free(void* ptr, const char* file, int line) {
 #include "stb_leakcheck.h"
 #endif // M9_ALLOCATOR_IMPLEMENTATION
 
-#ifdef free
+// if we've already included m9_allocator before, undefine the macros
+#ifdef malloc
+#undef malloc
 #undef free
+#undef realloc
 #endif
 
+#define malloc(sz,file,line)    m9_malloc(sz,  __FILE__, __LINE__)
+#define realloc(p,sz,file,line) m9_realloc(p,sz, __FILE__, __LINE__)
 #define free(p) m9_free(p,__FILE__,__LINE__)
 
 #define MetaC_Doc(...) 
