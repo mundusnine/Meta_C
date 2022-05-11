@@ -431,7 +431,7 @@ void GenerateDocsMD(FILE* file, MTC_Node* root) {
                 else {
                     char type[256] = { 0 };
                     linkifyType(n->type_string, type);
-                    fprintf(file, "* name: `%s` %s \n", n->string, type);
+                    fprintf(file, "* name: `%s` type: %s \n", n->string, type);
                     MTC_Tag* tag = MTC_GetTagNode(n, "Doc");
                     if (tag != NULL && tag->values_len > 0) {
                         fprintf(file, "\t>\n\t>  Description:\n\t>\n\t>  %s\n", tag->values[0]->type_string);
@@ -444,7 +444,7 @@ void GenerateDocsMD(FILE* file, MTC_Node* root) {
             char type[256] = { 0 };
             linkifyType(root->type_string, type);
             t = MTC_GetTagNode(root, "Doc");
-            fprintf(file, "* %s \n>Description:\n>\n>  %s \n",type,t->values[0]->type_string);
+            fprintf(file, "* type: %s \n>Description:\n>\n>  %s \n",type,t->values[0]->type_string);
             break;
         case Enum:
             fprintf(file, "### %s\n", root->type_string);
