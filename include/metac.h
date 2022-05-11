@@ -168,7 +168,7 @@ void GeneratePrintCode(FILE* file, MTC_Node* root, char* access_string)
 
     if (root->type == Struct) {
         MTC_Node* node = root;
-        fprintf(file, "printf(\"{ \");\n");
+        fprintf(file, "\tprintf(\"{ \");\n");
         for (int i = 0; i < root->child_len; ++i)
         {
             node = root->children[i];
@@ -182,33 +182,33 @@ void GeneratePrintCode(FILE* file, MTC_Node* root, char* access_string)
                     MTC_MatchType(node, "uint16_t") || MTC_MatchType(node, "u16") ||
                     MTC_MatchType(node, "uint8_t") || MTC_MatchType(node, "u8") || MTC_MatchType(node, "size_t"))
                 {
-                    fprintf(file, "printf(\"%s : %%i\", %s%s);\n", node->string, access_string, node->string);
+                    fprintf(file, "\tprintf(\"%s : %%i\", %s%s);\n", node->string, access_string, node->string);
                 }
 
                 else if (MTC_MatchType(node, "float") || MTC_MatchType(node, "double") ||
                     MTC_MatchType(node, "f32") || MTC_MatchType(node, "f64"))
                 {
-                    fprintf(file, "printf(\"%s : %%f\", %s%s);\n", node->string, access_string, node->string);
+                    fprintf(file, "\tprintf(\"%s : %%f\", %s%s);\n", node->string, access_string, node->string);
                 }
 
                 else if (MTC_MatchType(node, "[]char"))
                 {
-                    fprintf(file, "printf(\"%s : %%s\", %s%s);\n", node->string, access_string, node->string);
+                    fprintf(file, "\tprintf(\"%s : %%s\", %s%s);\n", node->string, access_string, node->string);
                 }
 
                 else if (MTC_MatchType(node, "char"))
                 {
-                    fprintf(file, "printf(\"%s : %%c\", %s%s);\n", node->string, access_string, node->string);
+                    fprintf(file, "\tprintf(\"%s : %%c\", %s%s);\n", node->string, access_string, node->string);
                 }
 
                 else if (MTC_MatchType(node, "*char") || MTC_MatchType(node, "char*"))
                 {
-                    fprintf(file, "printf(\"%s : %%s\", %s%s);\n", node->string, access_string, node->string);
+                    fprintf(file, "\tprintf(\"%s : %%s\", %s%s);\n", node->string, access_string, node->string);
                 }
 
                 else if (MTC_MatchType(node, "*void") || MTC_MatchType(node, "void*"))
                 {
-                    fprintf(file, "printf(\"%s : %%p\", %s%s);\n", node->string, access_string, node->string);
+                    fprintf(file, "\tprintf(\"%s : %%p\", %s%s);\n", node->string, access_string, node->string);
                 }
                 else
                 {
@@ -216,17 +216,17 @@ void GeneratePrintCode(FILE* file, MTC_Node* root, char* access_string)
                     MTC_Node* n = MTC_GetStructNode(node->type_string);
                     MTC_Node* e = MTC_GetEnumNode(node->type_string);
                     if (n != NULL) {
-                        fprintf(file, "printf(\"%s :\");\n", node->string);
+                        fprintf(file, "\tprintf(\"%s :\");\n", node->string);
                         char next_access_string[128] = { 0 };
                         snprintf(next_access_string, sizeof(next_access_string), "%s%s", access_string, node->string);
-                        fprintf(file, "Print%s(%s);\n", n->string, next_access_string);
+                        fprintf(file, "\tPrint%s(%s);\n", n->string, next_access_string);
                     }
                     else if (e != NULL) {
-                        fprintf(file, "printf(\"%s :\");\n", node->string);
+                        fprintf(file, "\tprintf(\"%s :\");\n", node->string);
                         char* name = root->string != NULL ? root->string : root->type_string;
                         char next_access_string[128] = { 0 };
                         snprintf(next_access_string, sizeof(next_access_string), "%s%s", access_string, node->string);
-                        fprintf(file, "Print%s(%s);\n", e->type_string, next_access_string);
+                        fprintf(file, "\tPrint%s(%s);\n", e->type_string, next_access_string);
                     }
                     else {
                         //DataDeskError(node, "Unhandled type for printing code generation.");
@@ -234,7 +234,7 @@ void GeneratePrintCode(FILE* file, MTC_Node* root, char* access_string)
                 }
 
                 if (i + 1 < root->child_len)
-                    fprintf(file, "printf(\", \");\n");
+                    fprintf(file, "\tprintf(\", \");\n");
             }
             else if (MTC_NodeHasTag(node, "PrintList")) {
                 MTC_Node* n = MTC_GetStructNode(node->type_string);
@@ -263,24 +263,24 @@ void GeneratePrintCode(FILE* file, MTC_Node* root, char* access_string)
                         continue;
                     }
                     if (length_access[0] != 0 && array_access[0] != 0) {
-                        fprintf(file, "printf(\"%s :\");\n", node->string);
-                        fprintf(file, "for(int i = 0;i < %s;++i){\n", length_access);
-                        fprintf(file, "\tPrint%s(%s);\n}\n", n->string, array_access);//@TODO: Fix me when we use @this
+                        fprintf(file, "\tprintf(\"%s :\");\n", node->string);
+                        fprintf(file, "\tfor(int i = 0;i < %s;++i){\n", length_access);
+                        fprintf(file, "\t\tPrint%s(%s);\n\t}\n", n->string, array_access);//@TODO: Fix me when we use @this
                     }
                 }
                 if (i + 1 < root->child_len)
-                    fprintf(file, "printf(\", \");\n");
+                    fprintf(file, "\tprintf(\", \");\n");
             }
         }
-        fprintf(file, "printf(\"}\");\n");
+        fprintf(file, "\tprintf(\"}\\n\");\n");
     }
     else if (root->type == Enum) {
-        fprintf(file, "switch(%s){\n", access_string);
+        fprintf(file, "\tswitch(%s){\n", access_string);
         for (int i = 0; i < root->child_len; ++i) {
             MTC_Node* node = root->children[i];
-            fprintf(file, "case %s:\n\tprintf(\"%s\");\n", node->string, node->string);
+            fprintf(file, "\t\tcase %s:\n\t\t\tprintf(\"%s\");\n\t\t\tbreak;\n", node->string, node->string);
         }
-        fprintf(file, "}\n");
+        fprintf(file, "\t}\n");
     }
 }
 
